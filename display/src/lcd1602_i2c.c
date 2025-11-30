@@ -246,10 +246,35 @@ int main(void)
     }
 
     lcd_clear();
-    lcd_print_line(0, "LCD 1602 ONLINE");
-    lcd_print_line(1, "Hello, Karthik!");
+    lcd_print_line(0, "MNET+BME Online");
+    lcd_print_line(1, "Waiting data...");
 
-    while (1)
+    while (1) {
+        int temp_mdegc = 0;
+        int tx = 0, rx = 0;
+        char line1[17];
+        char line2[17];
+
+        /* this is where &temp_mdegc goes */
+        read_int_from_file("/sys/kernel/debug/mnet/temp_mdegc_rx",
+                           &temp_mdegc);
+        /* optional: show mnet stats too */
+        //read_int_from_file("/sys/kernel/debug/mnet/tx_packets", &tx);
+       // read_int_from_file("/sys/kernel/debug/mnet/rx_packets", &rx);
+
+        /* temp_mdegc is milli-degC */
+        snprintf(line1, sizeof(line1),
+                 "T:%2d.%03dC",
+                 temp_mdegc / 1000,
+                 abs(temp_mdegc % 1000));
+
+        //snprintf(line2, sizeof(line2),
+         //        "TX:%4d RX:%4d", tx, rx);
+
+        lcd_print_line(0, line1);
+        lcd_print_line(1, line2);
+
         sleep(1);
+    }
 }
 
