@@ -1,4 +1,4 @@
-#include "lcd_1602.h"
+#include "lcd1602_i2c.h"
 
 #include <stdio.h>
 #include <stdlib.h>
