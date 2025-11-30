@@ -238,8 +238,9 @@ int main(void)
 {
     const char *i2c_dev = "/dev/i2c-1";
     const int   lcd_addr = 0x27;   // or 0x3F if that’s your module
-    int ret = lcd_init(i2c_dev, lcd_addr);
+    int ret;
 
+    ret = lcd_init(i2c_dev, lcd_addr);
     if (ret < 0) {
         fprintf(stderr, "lcd_1602: lcd_init failed\n");
         return 1;
@@ -251,30 +252,34 @@ int main(void)
 
     while (1) {
         int temp_mdegc = 0;
-        int tx = 0, rx = 0;
         char line1[17];
         char line2[17];
+        int r1;
 
-        /* this is where &temp_mdegc goes */
-        read_int_from_file("/sys/kernel/debug/mnet/temp_mdegc_rx",
-                           &temp_mdegc);
-        /* optional: show mnet stats too */
-        //read_int_from_file("/sys/kernel/debug/mnet/tx_packets", &tx);
-       // read_int_from_file("/sys/kernel/debug/mnet/rx_packets", &rx);
+        r1 = read_int_from_file("/sys/kernel/debug/mnet/temp_mdegc_rx",
+                                &temp_mdegc);
 
-        /* temp_mdegc is milli-degC */
-        snprintf(line1, sizeof(line1),
-                 "T:%2d.%03dC",
-                 temp_mdegc / 1000,
-                 abs(temp_mdegc % 1000));
+        printf("lcd_1602: r1=%d temp_mdegc=%d\n", r1, temp_mdegc);
+        fflush(stdout);
 
-        //snprintf(line2, sizeof(line2),
-         //        "TX:%4d RX:%4d", tx, rx);
+        if (r1 < 0) {
+            /* Could not read the value – show error */
+            snprintf(line1, sizeof(line1), "NO TEMP DATA");
+        } else {
+            snprintf(line1, sizeof(line1),
+                     "T:%2d.%03dC",
+                     temp_mdegc / 1000,
+                     abs(temp_mdegc % 1000));
+        }
+
+        snprintf(line2, sizeof(line2), "                "); // blank line
 
         lcd_print_line(0, line1);
         lcd_print_line(1, line2);
 
         sleep(1);
     }
+
+    return 0;
 }
 
