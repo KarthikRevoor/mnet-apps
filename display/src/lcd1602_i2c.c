@@ -1,4 +1,5 @@
-#include "lcd1602_i2c.h"
+#include "lcd_1602.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -10,14 +11,12 @@
 #include <string.h>
 
 /* ----------------- LCD / PCF8574 wiring assumptions -----------------
- * Common mapping (verify with your backpack):
+ * Common mapping (check your backpack):
  *   P0 -> RS
  *   P1 -> RW
  *   P2 -> EN
  *   P3 -> Backlight
  *   P4..P7 -> D4..D7
- *
- * If your module is wired differently, adjust the defines below.
  * ------------------------------------------------------------------ */
 
 #define LCD_RS   0x01
@@ -183,7 +182,7 @@ void lcd_print(const char *s)
 
     while (*s) {
         if (*s == '\n') {
-            /* crude: just jump to start of second line */
+            /* crude: jump to start of second line */
             lcd_set_cursor(1, 0);
         } else {
             lcd_write_byte((uint8_t)*s, LCD_CHR);
@@ -245,7 +244,7 @@ int main(void)
 
     ret = lcd_init(i2c_dev, lcd_addr);
     if (ret < 0) {
-        fprintf(stderr, "lcd_mnet: lcd_init failed\n");
+        fprintf(stderr, "lcd_1602: lcd_init failed\n");
         return 1;
     }
 
