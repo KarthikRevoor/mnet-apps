@@ -236,56 +236,20 @@ static int read_int_from_file(const char *path, int *out)
 
 int main(void)
 {
-    int ret;
-
-    /* Adjust address if your LCD is 0x3F */
     const char *i2c_dev = "/dev/i2c-1";
-    const int   lcd_addr = 0x27;
+    const int   lcd_addr = 0x27;   // or 0x3F if that’s your module
+    int ret = lcd_init(i2c_dev, lcd_addr);
 
-    ret = lcd_init(i2c_dev, lcd_addr);
     if (ret < 0) {
         fprintf(stderr, "lcd_1602: lcd_init failed\n");
         return 1;
     }
 
     lcd_clear();
-    lcd_print_line(0, "MNET+BME Online");
-    lcd_print_line(1, "Starting...");
+    lcd_print_line(0, "LCD 1602 ONLINE");
+    lcd_print_line(1, "Hello, Karthik!");
 
-    while (1) {
-        int temp_mdegc = 0;
-        int tx = 0, rx = 0;
-        char line1[17];
-        char line2[17];
-
-        /* from your BME280 kernel driver */
-        (void)read_int_from_file(
-            "/sys/bus/i2c/devices/1-0076/temp_mdegc",
-            &temp_mdegc);
-
-        /* from your mnet debugfs entries */
-        (void)read_int_from_file(
-            "/sys/kernel/debug/mnet/tx_packets",
-            &tx);
-        (void)read_int_from_file(
-            "/sys/kernel/debug/mnet/rx_packets",
-            &rx);
-
-        /* temp_mdegc is milli-degC */
-        snprintf(line1, sizeof(line1),
-                 "T:%2d.%03dC",
-                 temp_mdegc / 1000,
-                 abs(temp_mdegc % 1000));
-
-        snprintf(line2, sizeof(line2),
-                 "TX:%4d RX:%4d", tx, rx);
-
-        lcd_print_line(0, line1);
-        lcd_print_line(1, line2);
-
+    while (1)
         sleep(1);
-    }
-
-    return 0;
 }
 
