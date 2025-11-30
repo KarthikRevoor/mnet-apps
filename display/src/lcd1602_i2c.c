@@ -251,35 +251,36 @@ int main(void)
     lcd_print_line(1, "Waiting data...");
 
     while (1) {
-        int temp_mdegc = 0;
-        char line1[17];
-        char line2[17];
-        int r1;
+    int temp_mdegc = 0;
+    int r1;
+    char line1[17] = {0};               // fully zeroed
+    char line2[17] = "                "; // 16 spaces + '\0'
 
-        r1 = read_int_from_file("/sys/kernel/debug/mnet/temp_mdegc_rx",
-                                &temp_mdegc);
+    r1 = read_int_from_file("/sys/kernel/debug/mnet/temp_mdegc_rx",
+                            &temp_mdegc);
 
-        printf("lcd_1602: r1=%d temp_mdegc=%d\n", r1, temp_mdegc);
-        fflush(stdout);
+    printf("lcd_1602: r1=%d temp_mdegc=%d\n", r1, temp_mdegc);
+    fflush(stdout);
 
-        if (r1 < 0) {
-            /* Could not read the value – show error */
-            snprintf(line1, sizeof(line1), "NO TEMP DATA");
-        } else {
-            snprintf(line1, sizeof(line1),
-                     "T:%2d.%03dC",
-                     temp_mdegc / 1000,
-                     abs(temp_mdegc % 1000));
-        }
+    if (r1 < 0) {
+        // exactly 16 chars
+        strncpy(line1, "NO TEMP DATA    ", 16);
+        line1[16] = '\0';
+    } else {
+        int whole = temp_mdegc / 1000;
+        int frac  = temp_mdegc % 1000;
+        if (frac < 0) frac = -frac;  // safety if ever negative
 
-        snprintf(line2, sizeof(line2), "                "); // blank line
-
-        lcd_print_line(0, line1);
-        lcd_print_line(1, line2);
-
-        sleep(1);
+        // pad with spaces so we always fill 16 characters
+        // e.g. "T:22.398C      "
+        snprintf(line1, sizeof(line1),
+                 "T:%02d.%03dC      ", whole, frac);
+        line1[16] = '\0';  // force cap at 16 chars
     }
 
-    return 0;
+    lcd_print_line(0, line1);
+    lcd_print_line(1, line2);
+
+    sleep(1);
 }
 
