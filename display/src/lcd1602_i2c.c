@@ -10,19 +10,10 @@
 #include <errno.h>
 #include <string.h>
 
-/* ----------------- LCD / PCF8574 wiring assumptions -----------------
- * Common mapping (check your backpack):
- *   P0 -> RS
- *   P1 -> RW
- *   P2 -> EN
- *   P3 -> Backlight
- *   P4..P7 -> D4..D7
- * ------------------------------------------------------------------ */
-
 #define LCD_RS   0x01
 #define LCD_RW   0x02
 #define LCD_EN   0x04
-#define LCD_BL   0x08   /* backlight bit */
+#define LCD_BL   0x08   
 
 #define LCD_CMD  0
 #define LCD_CHR  1
@@ -30,7 +21,7 @@
 static int lcd_fd = -1;
 static uint8_t lcd_backlight = LCD_BL;
 
-/* ----------------- Low-level I2C helpers ----------------- */
+
 
 static int lcd_i2c_write(uint8_t data)
 {
@@ -49,30 +40,24 @@ static int lcd_pulse_enable(uint8_t data)
     if (lcd_i2c_write(data | LCD_EN) < 0)
         return -1;
 
-    /* Enable pulse width: a few microseconds is enough */
     usleep(1);
 
     if (lcd_i2c_write(data & ~LCD_EN) < 0)
         return -1;
 
-    /* Allow command to settle */
     usleep(50);
     return 0;
 }
 
-/* Write a single 4-bit nibble (upper 4 bits) plus control bits */
 static int lcd_write4(uint8_t nibble, uint8_t mode)
 {
     uint8_t data = 0;
 
-    /* Upper nibble goes to D4..D7 (P4..P7) */
     data = (nibble & 0xF0);
 
-    /* Attach RS if data (character) */
     if (mode == LCD_CHR)
         data |= LCD_RS;
 
-    /* Keep backlight state */
     data |= lcd_backlight;
 
     if (lcd_pulse_enable(data) < 0)
@@ -81,7 +66,6 @@ static int lcd_write4(uint8_t nibble, uint8_t mode)
     return 0;
 }
 
-/* Write full 8-bit value using two 4-bit transfers */
 static int lcd_write_byte(uint8_t value, uint8_t mode)
 {
     uint8_t high = value & 0xF0;
@@ -95,7 +79,6 @@ static int lcd_write_byte(uint8_t value, uint8_t mode)
     return 0;
 }
 
-/* ----------------- Public LCD API ----------------- */
 
 int lcd_init(const char *i2c_dev, int addr)
 {
@@ -118,10 +101,8 @@ int lcd_init(const char *i2c_dev, int addr)
 
     lcd_fd = fd;
 
-    /* Initialisation sequence for HD44780 in 4-bit mode */
-    usleep(50000); /* wait >40ms after power-up */
+    usleep(50000); 
 
-    /* three times 0x30 (8-bit mode) */
     lcd_write4(0x30, LCD_CMD);
     usleep(4500);
     lcd_write4(0x30, LCD_CMD);
@@ -129,24 +110,18 @@ int lcd_init(const char *i2c_dev, int addr)
     lcd_write4(0x30, LCD_CMD);
     usleep(150);
 
-    /* switch to 4-bit mode */
     lcd_write4(0x20, LCD_CMD);
     usleep(150);
 
-    /* function set: 4-bit, 2 lines, 5x8 font */
     lcd_write_byte(0x28, LCD_CMD);
 
-    /* display off */
     lcd_write_byte(0x08, LCD_CMD);
 
-    /* clear display */
     lcd_write_byte(0x01, LCD_CMD);
     usleep(2000);
 
-    /* entry mode: increment, no shift */
     lcd_write_byte(0x06, LCD_CMD);
 
-    /* display on, cursor off, blink off */
     lcd_write_byte(0x0C, LCD_CMD);
 
     return 0;
@@ -169,7 +144,6 @@ void lcd_set_cursor(int row, int col)
     if (col < 0) col = 0;
     if (col > 15) col = 15;
 
-    /* Line addresses: 0x00 and 0x40 for 16x2 */
     addr = (row == 0) ? (0x00 + col) : (0x40 + col);
 
     lcd_write_byte(0x80 | addr, LCD_CMD);
@@ -182,7 +156,6 @@ void lcd_print(const char *s)
 
     while (*s) {
         if (*s == '\n') {
-            /* crude: jump to start of second line */
             lcd_set_cursor(1, 0);
         } else {
             lcd_write_byte((uint8_t)*s, LCD_CHR);
@@ -197,7 +170,6 @@ void lcd_print_line(int row, const char *s)
 
     lcd_set_cursor(row, 0);
 
-    /* Write up to 16 chars, pad with spaces if needed */
     for (i = 0; i < 16; i++) {
         char c = ' ';
         if (s && s[i])
@@ -206,7 +178,6 @@ void lcd_print_line(int row, const char *s)
     }
 }
 
-/* ----------------- Utility: read integer from file ----------------- */
 
 static int read_int_from_file(const char *path, int *out)
 {
@@ -232,12 +203,11 @@ static int read_int_from_file(const char *path, int *out)
     return 0;
 }
 
-/* ----------------- Main: glue BME + mnet → LCD ----------------- */
 
 int main(void)
 {
     const char *i2c_dev = "/dev/i2c-1";
-    const int   lcd_addr = 0x27;   // or 0x3F if that’s your module
+    const int   lcd_addr = 0x27;
     int ret;
 
     ret = lcd_init(i2c_dev, lcd_addr);
@@ -253,8 +223,8 @@ int main(void)
     while (1) {
     int temp_mdegc = 0;
     int r1;
-    char line1[17] = {0};               // fully zeroed
-    char line2[17] = "                "; // 16 spaces + '\0'
+    char line1[17] = {0};             
+    char line2[17] = "                "; 
 
     r1 = read_int_from_file("/sys/kernel/debug/mnet/temp_mdegc_rx",
                             &temp_mdegc);
@@ -263,19 +233,16 @@ int main(void)
     fflush(stdout);
 
     if (r1 < 0) {
-        // exactly 16 chars
         strncpy(line1, "NO TEMP DATA    ", 16);
         line1[16] = '\0';
     } else {
         int whole = temp_mdegc / 1000;
         int frac  = temp_mdegc % 1000;
-        if (frac < 0) frac = -frac;  // safety if ever negative
+        if (frac < 0) frac = -frac;
 
-        // pad with spaces so we always fill 16 characters
-        // e.g. "T:22.398C      "
         snprintf(line1, sizeof(line1),
                  "T:%02d.%03dC      ", whole, frac);
-        line1[16] = '\0';  // force cap at 16 chars
+        line1[16] = '\0';
     }
 
     lcd_print_line(0, line1);
